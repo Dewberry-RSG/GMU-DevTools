@@ -5,8 +5,7 @@ Data retreival, visualization and analysis tools developed in collaboration with
 
 ## Contents: Use nbviewer to preview notebooks
 
-
- - [Gage_Data_Tools](http://nbviewer.jupyter.org/github/Dewberry-RSG/GMU-DevTools/blob/master/RGage_Data_Tools.ipynb): Tools for downloading & interacting with NOAA and USGS gage records.
+ - [Gage_Data_Tools](http://nbviewer.jupyter.org/github/Dewberry-RSG/GMU-DevTools/blob/master/nbs/Gage_Data_Tools.ipynb): Tools for downloading & interacting with NOAA and USGS gage records.
 
 
 ### Website Links 
