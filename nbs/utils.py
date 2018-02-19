@@ -67,10 +67,9 @@ def GotoUSGS(state):
     strb = '>USGS Gages: {}</a>'.format(state)
     strc = '>USGS Online Map </a>'
 
-  
     display(HTML(stra + gages_url + strb)) # Make link to State USGS Gages URL
     display(HTML(stra + map_link + strc)) # Make link to USGS Gage Map
-  
+    
 def Ping_USGS_API(gage, params):
     url = 'http://waterservices.usgs.gov/nwis/iv' # USGS API
     r   = requests.get(url, params = params) 
@@ -79,6 +78,7 @@ def Ping_USGS_API(gage, params):
     d = json.loads(data)
     mydict = dict(d['value']['timeSeries'][0])
     return d, mydict
+
 
 def GrabData(gage, start, stop, parameter = 'flow'):
     if parameter == 'flow':
@@ -126,6 +126,14 @@ def GrabData(gage, start, stop, parameter = 'flow'):
     # Plot the Results, and use the SiteName as a title!
     return df
 
+
+
+
+#-----------------------------------------------------------------------------#
+#--NOAA API-like Functions
+#-----------------------------------------------------------------------------#
+
+
 def GetHourlyObs(gage, start, stop):
     '''--NOAA API https://tidesandcurrents.noaa.gov/api/'''
     datum     = "msl"   #"NAVD"                   #Datum
@@ -165,4 +173,48 @@ def GetHourlyObs(gage, start, stop):
         
         del noaa.index.name
         #print('We have Observations ' , gage) 
+        return noaa
+    
+def GetHourlyPreds(gage, start, stop):
+    '''--NOAA API https://tidesandcurrents.noaa.gov/api/'''
+    datum     = "msl"   #"NAVD"                   #Datum
+    units     = "english"                         #Units
+    time_zone = "gmt"                             #Time Zone
+    fmt       = "json"                            #Format
+    url       = 'http://tidesandcurrents.noaa.gov/api/datagetter'
+    product   = 'predictions'                     #Product
+    
+    noaa_time_step = '6T'
+    noaa = pd.DataFrame()
+    gages = dict()
+    
+    t0     = start.strftime('%Y%m%d %H:%M')
+    t1     = stop.strftime('%Y%m%d %H:%M')
+    api_params = {'begin_date': t0, 'end_date': t1,
+                'station': gage,'product':product,'datum':datum,
+                'units':units,'time_zone':time_zone,'format':fmt,
+                'application':'web_services' }
+        
+    pred=[];t=[]   
+    
+    r = requests.get(url, params = api_params)
+    jdata =r.json()
+    if 'error' in jdata:
+        print(jdata)
+    
+    else:
+        for j in jdata['predictions']:
+            t.append(str(j['t']))
+            pred.append(str(j['v']))
+
+        colname = str(gage)  + '_tides'   
+        noaa[colname]= pred
+        noaa[colname] = noaa[colname].astype(float)
+
+        noaa['idx'] = pd.to_datetime(t)
+        noaa = noaa.set_index('idx')
+        del noaa.index.name
+
+        #print('We have Observations ' , gage) 
+        noaa = noaa.resample('1H').last()
         return noaa

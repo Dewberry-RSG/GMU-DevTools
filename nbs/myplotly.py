@@ -47,7 +47,7 @@ def PeaksPlot(peaks, gage_id, notebook=True):
     else:
         interactive = iplot(fig)
 
-def Simple_Plot(df, xlabel = None, ylabel = None, title = None, notebook=True):
+def USGS_Plot(df, xlabel = None, ylabel = None, title = None, notebook=True):
     raw_data = df[df.columns[0]]
     
     gage_plot = go.Scatter(x = raw_data.index,
@@ -89,7 +89,60 @@ def Simple_Plot(df, xlabel = None, ylabel = None, title = None, notebook=True):
     else:
         interactive = iplot(fig)
 
+def NOAA_Plot(df_obs, df_preds, xlabel = None, ylabel = None, title = None, notebook=True):
+    obs_data = df_obs[df_obs.columns[0]]
+    pred_data = df_preds[df_preds.columns[0]]
+    
+    obs_plot = go.Scatter(x = obs_data.index,
+            y = obs_data.values,
+            name='Observed',
+            mode='line',
+            marker=dict(
+                size='16',
+                color='blue'
+            )
+        )
+    
+    pred_plot = go.Scatter(x = pred_data.index,
+            y = pred_data.values,
+            name='Prediccted',
+            mode='line',
+            marker=dict(
+                size='16',
+                color='#808080'
+            )
+        )
 
+    data = [obs_plot, pred_plot]
+
+    layout = go.Layout(
+        title=title,
+        xaxis=dict(
+            title=xlabel,
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=16,
+                color='#7f7f7f'
+            )
+        ),
+        yaxis=dict(
+            title=ylabel,
+            titlefont=dict(
+                family='Courier New, monospace',
+                size=14,
+                color='#7f7f7f'
+            )
+        )
+    )
+    
+    
+    fig = go.Figure(data=data, layout=layout)
+    if not notebook:
+        interactive = plot(fig)
+    else:
+        interactive = iplot(fig)
+        
+        
 def Double_axis_Plot(usgs, noaa, y_usgs_label = None,y_noaa_label = None,
                      x_label = None, title = None, notebook=True):
     
