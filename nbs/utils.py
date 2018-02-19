@@ -218,3 +218,60 @@ def GetHourlyPreds(gage, start, stop):
         #print('We have Observations ' , gage) 
         noaa = noaa.resample('1H').last()
         return noaa
+    
+def GetEventWind(gage, start, stop, product, print_out=False):
+    '''--NOAA API https://tidesandcurrents.noaa.gov/api/'''
+    interval  = 'h'
+    datum     = "msl"   #"NAVD"                   #Datum
+    units     = "english"                         #Units
+    time_zone = "gmt"                             #Time Zone
+    fmt       = "json"                            #Format
+    url       = 'http://tidesandcurrents.noaa.gov/api/datagetter'
+
+    noaa = pd.DataFrame()
+    df = pd.DataFrame()
+    
+    t0     = start.strftime('%Y%m%d %H:%M')
+    t1     = stop.strftime('%Y%m%d %H:%M')
+    api_params = {'begin_date': t0, 'end_date': t1,
+                'station': gage,'product':product,'datum':datum,
+                'units':units,'time_zone':time_zone,'format':fmt,
+                'interval': interval, 'application':'web_services' }
+    d = []
+    dr = []
+    f = []
+    g = []
+    s = []
+    t = []
+
+    r = requests.get(url, params = api_params)
+    jdata =r.json()
+    #print(url, api_params)
+    if 'error' in jdata:
+        print(start,'error code: ', r.status_code)
+
+    else:
+        for j in jdata['data']:
+            t.append(str(j['t']))
+            d.append(str(j['d']))
+            dr.append(str(j['dr']))
+            f.append(str(j['f']))
+            g.append(str(j['g']))
+            s.append(str(j['s']))
+    df['d']= d
+    df['dr']= dr
+    df['f']= f
+    df['g']= g
+    df['s']= s
+    df['idx'] = pd.to_datetime(t)
+    df = df.set_index('idx') 
+    noaa = pd.concat([noaa,df], ignore_index=False)
+    if print_out:
+        print("Adding {} to {}".format(start, stop)) 
+    df = pd.DataFrame()
+        
+    noaa['g'] = pd.to_numeric(noaa['g'])
+    noaa['s'] = pd.to_numeric(noaa['s'])
+    noaa['d'] = pd.to_numeric(noaa['d'])
+
+    return noaa

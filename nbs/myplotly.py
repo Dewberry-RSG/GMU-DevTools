@@ -1,9 +1,13 @@
 from plotly import __version__
+import numpy as np 
+import pandas as pd
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 #print(__version__) # requires version >= 1.9.0
 init_notebook_mode(connected=True)
 import plotly.plotly as py
 import plotly.graph_objs as go
+import colorlover as cl
+
 
 
 def PeaksPlot(peaks, gage_id, notebook=True):
@@ -210,3 +214,69 @@ def Double_axis_Plot(usgs, noaa, y_usgs_label = None,y_noaa_label = None,
         interactive = plot(fig)
     else:
         interactive = iplot(fig)
+        
+        
+def wind_rose_dev(df, data_col = 'wind_gust'):
+    df.rename(columns = {'d':'wind_dir', 'g':'wind_gust', 's':'wind_speed'}, inplace=True)
+
+    # Remove suspected erroneous data from wind speed
+    wind_speed_error_detector = 100 # assume wind speed > 100 mph are erroneous (Hazel was highest of record, in DC: 98mph)
+    wind_speed_errors = df.query('wind_speed > {}'.format(wind_speed_error_detector)).index
+    wind_speed_errors
+    df.drop(wind_speed_errors, axis = 0, inplace = True)
+
+    # Remove suspected erroneous data from wind gusts
+    wind_gust_error_detector = df['wind_speed'].max()*1.5 # assume wind gusts above 1.5*max speed are erroneous
+    wind_gust_errors = df.query('wind_gust > {}'.format(wind_gust_error_detector)).index
+    df.drop(wind_gust_errors, axis = 0, inplace = True)
+
+    # Remove suspected erroneous data from wind dir
+    wind_dir_error_detector = 360 # above 360 degrees is erroneous
+    wind_dir_errors = df.query('wind_dir > {}'.format(wind_dir_error_detector)).index
+    df.drop(wind_dir_errors, axis = 0, inplace = True)
+
+
+
+    bin_range = range(0,int(np.ceil(df[data_col].max())+5),5)
+    sort_range = range(0,int(np.ceil(df[data_col].max())+0),5)
+
+    labels = [ "{0}-{1}".format(i, i + 5) for i in sort_range]
+    df['group'] = pd.cut(df[data_col], bin_range, right=False, labels=labels)
+
+    table = pd.pivot_table(df, values=data_col, index=['dr'],columns=['group'], aggfunc='count')
+    del table.index.name
+
+    dir_cat = ["N", "NNE", "NE", "ENE", "E","ESE", "SE" ,"SSE", 
+               "S","SSW","SW","WSW","W","WNW","NW","NNW"]
+    dfnew = pd.DataFrame(dir_cat)
+    dfnew.rename(columns={0:'r'}, inplace=True)
+    dfnew.set_index('r', inplace=True)
+    del dfnew.index.name
+    dfnew.reset_index(inplace=True)
+    dfnew.rename(columns={'index':'r'},inplace=True)
+
+    for col in table:
+        dfnew[col] = 0
+
+    for i, idx in enumerate(dfnew['r']):
+        heading_data = table[table.index==idx].values
+        for data in heading_data:
+            for j, d in enumerate(data):
+                dfnew[dfnew.columns[j+1]].iloc[i] = d
+
+    data = []
+    counter = 0
+    for col in dfnew.columns:
+        if col != 'r':
+            data.append(
+                go.Area(t=dfnew['r'],
+                        r=dfnew[col],
+                        marker=dict(color=cl.scales['9']['seq']['PuBu'][counter]),
+                        name=col+' knots' ) )
+            counter+=1
+
+    fig = go.Figure(data=data, layout=go.Layout(orientation=270, barmode='stack'))
+
+
+    interactive = iplot(fig)
+    
